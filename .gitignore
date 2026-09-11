@@ -1,0 +1,15 @@
+# Build artifacts
+server
+*.o
+*.out
+build/
+
+# Editor/tooling
+.idea/
+.vscode/
+.cache/
+compile_commands.json
+tags
+
+# macOS
+.DS_Store
