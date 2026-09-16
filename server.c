@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
   }
 
   printf("server listening on port %s\n", argv[1]);
-
+    // TODO: multiple clients on same server at same time
   for (;;) {
     // wait here until a client connects; get a NEW fd for that client
     int client_fd = accept(server_fd, NULL, NULL);
