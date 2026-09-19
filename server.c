@@ -5,6 +5,7 @@
 #include <signal.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include "bruteforce.h"
 
 int main(int argc, char *argv[]) {
 
