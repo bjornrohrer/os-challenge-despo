@@ -14,3 +14,6 @@ tags
 
 # macOS
 .DS_Store
+
+# docs
+*.pdf
