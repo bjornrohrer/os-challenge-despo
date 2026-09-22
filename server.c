@@ -6,6 +6,24 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include "bruteforce.h"
+#include <stdint.h>
+#include <pthread.h>
+
+void *handle_client(void *arg) {
+    int client_fd = (int)(intptr_t)arg;
+
+    char buff[1024];
+    for (;;) {
+        size_t n = recv(client_fd, buff, sizeof(buff), 0);
+      if (n > 0) {
+        send(client_fd, buff, n, 0); // echo the n bytes we got
+      } else {
+        break;
+      }
+    }
+    close(client_fd);
+    return NULL;
+}
 
 int main(int argc, char *argv[]) {
 
@@ -70,20 +88,15 @@ int main(int argc, char *argv[]) {
       continue; // this client failed; keep serving others
     }
 
-    // echo loop: read bytes, send them back, until the client hangs up
-    char buf[1024];
-    for (;;) {
-      ssize_t n = recv(client_fd, buf, sizeof(buf), 0);
-      if (n > 0) {
-        send(client_fd, buf, n, 0); // echo the n bytes we got
-      } else if (n == 0) {
-        break; // client closed the connection: normal end
-      } else {
-        perror("recv"); // n == -1: something went wrong
-        break;
-      }
-    }
 
-    close(client_fd); // done with THIS client, server_fd stays open
+    pthread_t tid;
+    int rc = pthread_create(&tid, NULL, handle_client,(void *)(intptr_t) client_fd);
+
+    if (rc != 0) {
+        fprintf(stderr, "pthread_create: %s\n", strerror(rc));
+        close(client_fd);
+        continue;
+    }
+    pthread_detach(tid);
   }
 }
