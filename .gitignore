@@ -17,3 +17,15 @@ tags
 
 # docs
 *.pdf
+
+# teaching workspace (mattpocock-skills:teach) — not part of the challenge submission
+MISSION.md
+RESOURCES.md
+NOTES.md
+reference/
+learning-records/
+lessons/
+assets/
+MISSION-FORMAT.md
+RESOURCES-FORMAT.md
+LEARNING-RECORD-FORMAT.md
