@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
       continue; // this client failed; keep serving others
     }
 
-
+    // allow multiple clients to access the server at the same time
     pthread_t tid;
     int rc = pthread_create(&tid, NULL, handle_client,(void *)(intptr_t) client_fd);
 
