@@ -11,21 +11,21 @@
 #include "messages.h"
 
 void *handle_client(void *arg) {
-    int client_fd = (int)(intptr_t)arg;
+    int client_fd = (int)(intptr_t)arg; // turns arg into int
 
-    uint8_t buff[1024];
-    int total = 0;
-    uint64_t answer = 0;
+    uint8_t buff[1024]; // allocate buffer space. does not have to be 1024 could be PACKET_REQUEST_SIZE
+    int total = 0; // running total to keep track
+    uint64_t answer = 0; // the answer that we return back
     for (;;) {
-        ssize_t recv_fd = recv(client_fd, buff + total, PACKET_REQUEST_SIZE - total, 0);
-        if (recv_fd > 0) {
+        ssize_t recv_fd = recv(client_fd, buff + total, PACKET_REQUEST_SIZE - total, 0); // receives the packet from client and every iteration of the loop takes away the total amount so we know that we have gotten the whole packet
+        if (recv_fd > 0) { // if we get no error code we add the returned value from recv_fd to the total
             total += recv_fd;
-        } else {
+        } else { // if we get -1 we close the client
             close(client_fd);
             return NULL;
         }
 
-        if (total == PACKET_REQUEST_SIZE) {
+        if (total == PACKET_REQUEST_SIZE) { // when we have received the whole packet we copy it and turn it from network to host for the start and the end. hash stays the same.
             uint64_t tmp_start;
             memcpy(&tmp_start, buff + PACKET_REQUEST_START_OFFSET, 8);
             uint64_t start = be64toh(tmp_start);
@@ -35,25 +35,17 @@ void *handle_client(void *arg) {
             uint64_t end = be64toh(tmp_end);
 
             uint8_t *hash = buff + PACKET_REQUEST_HASH_OFFSET;
-            answer = crack(hash, start, end);
+            answer = crack(hash, start, end); // crack the answer
             break;
         }
     }
 
-    uint64_t out = htobe64(answer);
+    uint64_t out = htobe64(answer); // turn to host to network to send out.
     send(client_fd, &out, PACKET_RESPONSE_SIZE, 0);
 
-    close(client_fd); // might be two early to close the client
+    close(client_fd); // close the client
     return NULL;
 
-        /*for (;;) {
-        size_t n = recv(client_fd, buff, sizeof(buff), 0);
-      if (n > 0) {
-        send(client_fd, buff, n, 0); // echo the n bytes we got
-      } else {
-        break;
-      }
-    }*/
 }
 
 int main(int argc, char *argv[]) {
