@@ -8,21 +8,52 @@
 #include "bruteforce.h"
 #include <stdint.h>
 #include <pthread.h>
+#include "messages.h"
 
 void *handle_client(void *arg) {
     int client_fd = (int)(intptr_t)arg;
 
-    char buff[1024];
+    uint8_t buff[1024];
+    int total = 0;
+    uint64_t answer = 0;
     for (;;) {
+        ssize_t recv_fd = recv(client_fd, buff + total, PACKET_REQUEST_SIZE - total, 0);
+        if (recv_fd > 0) {
+            total += recv_fd;
+        } else {
+            close(client_fd);
+            return NULL;
+        }
+
+        if (total == PACKET_REQUEST_SIZE) {
+            uint64_t tmp_start;
+            memcpy(&tmp_start, buff + PACKET_REQUEST_START_OFFSET, 8);
+            uint64_t start = be64toh(tmp_start);
+
+            uint64_t tmp_end;
+            memcpy(&tmp_end, buff + PACKET_REQUEST_END_OFFSET, 8);
+            uint64_t end = be64toh(tmp_end);
+
+            uint8_t *hash = buff + PACKET_REQUEST_HASH_OFFSET;
+            answer = crack(hash, start, end);
+            break;
+        }
+    }
+
+    uint64_t out = htobe64(answer);
+    send(client_fd, &out, PACKET_RESPONSE_SIZE, 0);
+
+    close(client_fd); // might be two early to close the client
+    return NULL;
+
+        /*for (;;) {
         size_t n = recv(client_fd, buff, sizeof(buff), 0);
       if (n > 0) {
         send(client_fd, buff, n, 0); // echo the n bytes we got
       } else {
         break;
       }
-    }
-    close(client_fd);
-    return NULL;
+    }*/
 }
 
 int main(int argc, char *argv[]) {
