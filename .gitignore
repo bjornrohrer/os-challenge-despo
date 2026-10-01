@@ -10,6 +10,7 @@ build/
 .vscode/
 .cache/
 compile_commands.json
+.clangd
 tags
 
 # macOS
