@@ -18,6 +18,8 @@ tags
 # docs
 *.pdf
 
+.clangd
+
 # teaching workspace (mattpocock-skills:teach) — not part of the challenge submission
 MISSION.md
 RESOURCES.md
