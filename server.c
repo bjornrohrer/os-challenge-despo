@@ -103,6 +103,7 @@ int main(int argc, char *argv[]) {
 
   printf("server listening on port %s\n", argv[1]);
 
+  // if not set we get a bunch of zombie processes
   signal(SIGCHLD, SIG_IGN);
 
   for (;;) {
@@ -127,7 +128,7 @@ int main(int argc, char *argv[]) {
         close(server_fd); // close the server for the child
         handle_client((void *)(intptr_t) client_fd); // handle the client and change int to pointer
         exit(0); // exit with code 0 for success
-    } else { // close the client for the parent process, and reap zombies
+    } else { // close the client for the parent process
         close(client_fd);
     }
 
