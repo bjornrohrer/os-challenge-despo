@@ -120,7 +120,9 @@ int main(int argc, char *argv[]) {
     }
 
     if (pid == 0) {
+        close(listen_fd);
         handle_client((void *)(intptr_t) client_fd);
+        exit(0);
     }
 
    /* // allow multiple clients to access the server at the same time
