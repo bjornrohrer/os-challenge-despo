@@ -120,7 +120,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (pid == 0) {
-        close(listen_fd);
+        close(server_fd);
         handle_client((void *)(intptr_t) client_fd);
         exit(0);
     }
