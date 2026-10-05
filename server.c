@@ -102,6 +102,9 @@ int main(int argc, char *argv[]) {
   }
 
   printf("server listening on port %s\n", argv[1]);
+
+  signal(SIGCHLD, SIG_IGN);
+
   for (;;) {
     // wait here until a client connects; get a NEW fd for that client
     int client_fd = accept(server_fd, NULL, NULL);
@@ -124,7 +127,7 @@ int main(int argc, char *argv[]) {
         close(server_fd); // close the server for the child
         handle_client((void *)(intptr_t) client_fd); // handle the client and change int to pointer
         exit(0); // exit with code 0 for success
-    } else {
+    } else { // close the client for the parent process, and reap zombies
         close(client_fd);
     }
 
