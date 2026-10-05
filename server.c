@@ -110,7 +110,20 @@ int main(int argc, char *argv[]) {
       continue; // this client failed; keep serving others
     }
 
-    // allow multiple clients to access the server at the same time
+    // fork a process
+    pid_t pid = fork();
+    // if fork fails. close the client and continue
+    if (pid == -1) {
+        perror("fork");
+        close(client_fd);
+        continue;
+    }
+
+    if (pid == 0) {
+        handle_client((void *)(intptr_t) client_fd);
+    }
+
+   /* // allow multiple clients to access the server at the same time
     pthread_t tid;
     int rc = pthread_create(&tid, NULL, handle_client,(void *)(intptr_t) client_fd);
 
@@ -119,6 +132,6 @@ int main(int argc, char *argv[]) {
         close(client_fd);
         continue;
     }
-    pthread_detach(tid);
+    pthread_detach(tid); */
   }
 }
