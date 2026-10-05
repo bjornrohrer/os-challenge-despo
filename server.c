@@ -124,6 +124,8 @@ int main(int argc, char *argv[]) {
         close(server_fd); // close the server for the child
         handle_client((void *)(intptr_t) client_fd); // handle the client and change int to pointer
         exit(0); // exit with code 0 for success
+    } else {
+        close(client_fd);
     }
 
    /* // allow multiple clients to access the server at the same time
