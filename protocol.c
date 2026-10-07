@@ -32,7 +32,16 @@ void *handle_client(void *arg) {
 
             uint8_t *hash = buff + PACKET_REQUEST_HASH_OFFSET;
             uint8_t priority = buff[PACKET_REQUEST_PRIO_OFFSET];
-            answer = crack(hash, start, end); // crack the answer
+            struct request job; // Requests for queuing
+
+            job.start = start;
+            job.end = end;
+            job.priority = priority;
+            job.client_fd = client_fd;
+
+            memcpy(job.hash, hash, SHA256_DIGEST_LENGTH);
+
+            answer = crack(job.hash, job.start, job.end); // crack the answer
             break;
         }
     }
