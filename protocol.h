@@ -13,5 +13,11 @@ struct request {
     uint8_t priority;
     int client_fd;
 };
+
+struct request_node {
+    struct request job;
+    struct request_node *next;
+};
+
 #endif
 

@@ -5,6 +5,42 @@
 #include <stdint.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <stdlib.h>
+
+static struct request_node *head = NULL;
+
+static int enqeueue_request(struct request job) {  // adds a request to the queue. returns 0 on success and -1 if memory allocation fails.
+    static int enqueue_request(struct request job) {
+    struct request_node *new_node = malloc(sizeof *new_node);  // allocate memory for one node so it can stay in the queue after this function returns
+
+    if (new_node == NULL) { // if memory allocation fails we return an error without changing the queue
+        return -1;
+    }
+
+    new_node->job = job; // copy the whole request into the node, including the hash array
+    new_node->next = NULL; // the node does not point to another node yet
+
+    if (head == NULL || job.priority > head->job.priority) { // insert at the front if the queue is empty or the new job has higher priority than the first job
+
+        new_node->next = head; // connect the new node to the old first node before changing head
+        head = new_node; // make the new node the first node in the queue
+    }
+
+    else {
+        struct request_node *current = head; // use a separate pointer to walk through the queue without moving head
+
+        while (current->next != NULL &&
+               current->next->job.priority >= job.priority) { // keep moving while the next node exists and has higher or equal priority
+            current = current->next; // move to the next node. equal priorities are passed so older jobs stay first
+        }
+
+        new_node->next = current->next; // connect the new node to the rest of the queue
+        current->next = new_node; // connect the previous node to the new node
+    }
+
+    return 0; // the request was successfully added to the queue
+}
+
 
 void *handle_client(void *arg) {
     int client_fd = (int)(intptr_t)arg; // turns arg into int
