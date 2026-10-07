@@ -6,12 +6,15 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 static struct request_node *head = NULL;
+static pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER; // initialize the lock shared by all threads accessing the queue
+static pthread_cond_t queue_ready = PTHREAD_COND_INITIALIZER; // lets workers wait until the queue contains a job
 
-static int enqeueue_request(struct request job) {  // adds a request to the queue. returns 0 on success and -1 if memory allocation fails.
-    static int enqueue_request(struct request job) {
+static int enqueue_request(struct request job) {  // adds a request to the queue. returns 0 on success and -1 if memory allocation fails.
     struct request_node *new_node = malloc(sizeof *new_node);  // allocate memory for one node so it can stay in the queue after this function returns
+
 
     if (new_node == NULL) { // if memory allocation fails we return an error without changing the queue
         return -1;
@@ -19,7 +22,8 @@ static int enqeueue_request(struct request job) {  // adds a request to the queu
 
     new_node->job = job; // copy the whole request into the node, including the hash array
     new_node->next = NULL; // the node does not point to another node yet
-
+    pthread_mutex_lock(&queue_mutex); // lock the queue before reading or changing its links
+    
     if (head == NULL || job.priority > head->job.priority) { // insert at the front if the queue is empty or the new job has higher priority than the first job
 
         new_node->next = head; // connect the new node to the old first node before changing head
@@ -37,6 +41,9 @@ static int enqeueue_request(struct request job) {  // adds a request to the queu
         new_node->next = current->next; // connect the new node to the rest of the queue
         current->next = new_node; // connect the previous node to the new node
     }
+
+        pthread_cond_signal(&queue_ready); // wake one waiting worker now that a job has been added
+        pthread_mutex_unlock(&queue_mutex); // unlock the queue so another thread can access it
 
     return 0; // the request was successfully added to the queue
 }
@@ -68,7 +75,7 @@ void *handle_client(void *arg) {
 
             uint8_t *hash = buff + PACKET_REQUEST_HASH_OFFSET;
             uint8_t priority = buff[PACKET_REQUEST_PRIO_OFFSET];
-            struct request job; // Requests for queuing
+            struct request job; // requests for queuing
 
             job.start = start;
             job.end = end;
