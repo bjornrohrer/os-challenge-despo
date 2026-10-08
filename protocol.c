@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <errno.h>
 
 static struct request_node *head = NULL;
 static pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER; // initialize the lock shared by all threads accessing the queue
@@ -23,7 +24,7 @@ static int enqueue_request(struct request job) {  // adds a request to the queue
     new_node->job = job; // copy the whole request into the node, including the hash array
     new_node->next = NULL; // the node does not point to another node yet
     pthread_mutex_lock(&queue_mutex); // lock the queue before reading or changing its links
-    
+
     if (head == NULL || job.priority > head->job.priority) { // insert at the front if the queue is empty or the new job has higher priority than the first job
 
         new_node->next = head; // connect the new node to the old first node before changing head
@@ -48,13 +49,60 @@ static int enqueue_request(struct request job) {  // adds a request to the queue
     return 0; // the request was successfully added to the queue
 }
 
+static struct request dequeue_request(void) {
+    pthread_mutex_lock(&queue_mutex); // lock the queue
+
+    while (head == NULL) {
+        pthread_cond_wait(&queue_ready, &queue_mutex); // wait for a job and let other threads access the queue
+    }
+
+    struct request_node *first_node = head; // save the first node
+    struct request job = first_node->job; // copy the request before freeing the node
+
+    head = first_node->next; // move head to the next node
+
+    pthread_mutex_unlock(&queue_mutex); // finished changing the queue
+
+    free(first_node); // free the removed node
+    return job; // return the copied request to the worker
+}
+
+void *worker(void *arg) {
+    (void)arg; // this worker does not need an argument
+
+    for (;;) {
+        struct request job = dequeue_request(); // wait for work and take the highest priority job
+
+        uint64_t answer = crack(job.hash, job.start, job.end); // calculate the answer
+        uint64_t out = htobe64(answer); // convert the answer to network byte order
+
+        size_t sent = 0; // count how many bytes have been sent
+uint8_t *response = (uint8_t *)&out; // access the answer one byte at a time
+
+while (sent < PACKET_RESPONSE_SIZE) {
+    ssize_t result = send(job.client_fd, response + sent,
+                          PACKET_RESPONSE_SIZE - sent, 0);
+
+    if (result > 0) {
+        sent += result; // add the number of bytes actually sent
+    } else if (result == -1 && errno == EINTR) {
+        continue; // retry if a signal interrupted send
+    } else {
+        break; // stop sending if the connection fails
+    }
+}
+
+close(job.client_fd); // close this client's connection before taking another job
+    }
+
+    return NULL;
+}
 
 void *handle_client(void *arg) {
     int client_fd = (int)(intptr_t)arg; // turns arg into int
 
     uint8_t buff[1024]; // allocate buffer space. does not have to be 1024 could be PACKET_REQUEST_SIZE
     int total = 0; // running total to keep track
-    uint64_t answer = 0; // the answer that we return back
     for (;;) {
         ssize_t recv_fd = recv(client_fd, buff + total, PACKET_REQUEST_SIZE - total, 0); // receives the packet from client and every iteration of the loop takes away the total amount so we know that we have gotten the whole packet
         if (recv_fd > 0) { // if we get no error code we add the returned value from recv_fd to the total
@@ -84,15 +132,12 @@ void *handle_client(void *arg) {
 
             memcpy(job.hash, hash, SHA256_DIGEST_LENGTH);
 
-            answer = crack(job.hash, job.start, job.end); // crack the answer
-            break;
+            if (enqueue_request(job) == -1) {
+                close(client_fd); // close the connection if the job could not be queued
+                return NULL;
+            }
+
+            return NULL; // the worker now handles the job and closes the connection
         }
     }
-
-    uint64_t out = htobe64(answer); // turn to host to network to send out.
-    send(client_fd, &out, PACKET_RESPONSE_SIZE, 0);
-
-    close(client_fd); // close the client
-    return NULL;
-
 }

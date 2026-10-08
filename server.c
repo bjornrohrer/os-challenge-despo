@@ -65,6 +65,17 @@ int main(int argc, char *argv[]) {
     perror("listen");
     return 1;
   }
+    
+  pthread_t worker_thread;
+  int worker_rc = pthread_create(&worker_thread, NULL, worker, NULL); // start one worker before accepting clients
+
+  if (worker_rc != 0) {
+    fprintf(stderr, "worker pthread_create: %s\n", strerror(worker_rc));
+    close(server_fd);
+    return 1;
+  }
+
+  pthread_detach(worker_thread); // release thread resources automatically when it finishes
 
   printf("server listening on port %s\n", argv[1]);
     // TODO: multiple clients on same server at same time

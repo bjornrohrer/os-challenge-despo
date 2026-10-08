@@ -5,6 +5,7 @@
 #include "messages.h"
 
 void *handle_client(void *arg);
+void *worker(void *arg);
 
 struct request {
     uint8_t hash[SHA256_DIGEST_LENGTH];
