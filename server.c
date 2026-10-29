@@ -64,24 +64,31 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    int numCPU = sysconf(_SC_NPROCESSORS_ONLN);
-
-
-    pthread_t worker_thread;
-    int worker_rc = pthread_create(&worker_thread, NULL, worker, NULL); // start one worker before accepting clients
-
-    if (worker_rc != 0) {
-        fprintf(stderr, "worker pthread_create: %s\n", strerror(worker_rc));
-        close(server_fd);
-        return 1;
+    // get the number of cpu cores
+    long numCPU = sysconf(_SC_NPROCESSORS_ONLN);
+    if (numCPU < 1) {
+        fprintf(stderr, "Number of cpu cores could not be determined, using 2 workers\n");
+        numCPU = 2; // fallback if we can't determine how many cores the cpu has
     }
 
-    pthread_detach(worker_thread); // release thread resources automatically when it finishes
+    for (int i = 0; i < numCPU; i++) {
+        pthread_t worker_thread;
+        int worker_rc = pthread_create(&worker_thread, NULL, worker, NULL); // start worker before accepting clients
+
+        if (worker_rc != 0) {
+            fprintf(stderr, "worker pthread_create: %s\n", strerror(worker_rc));
+            close(server_fd);
+            return 1;
+        }
+
+        pthread_detach(worker_thread); // release thread resources automatically when it finishes
+
+    }
 
     printf("server listening on port %s\n", argv[1]);
 
     // prints the number of cpu cores to the screen
-    printf("Number of availiable cpu cores %d\n", numCPU);
+    printf("Number of available worker threads %ld\n", numCPU);
 
     // TODO: multiple clients on same server at same time
     for (;;) {
