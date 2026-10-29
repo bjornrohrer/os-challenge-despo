@@ -76,6 +76,11 @@ int main(int argc, char *argv[]) {
   pthread_detach(worker_thread); // release thread resources automatically when it finishes
 
   printf("server listening on port %s\n", argv[1]);
+
+  // prints the number of cpu cores to the screen
+  int numCPU = sysconf(_SC_NPROCESSORS_ONLN);
+  printf("Number of availiable cpu cores %d\n", numCPU);
+
     // TODO: multiple clients on same server at same time
   for (;;) {
     // wait here until a client connects; get a NEW fd for that client
