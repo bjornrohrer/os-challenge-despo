@@ -77,7 +77,7 @@ void *worker(void *arg) {
         uint64_t out = htobe64(answer); // convert the answer to network byte order
 
         size_t sent = 0; // count how many bytes have been sent
-uint8_t *response = (uint8_t *)&out; // access the answer one byte at a time
+        uint8_t *response = (uint8_t *)&out; // access the answer one byte at a time
 
 while (sent < PACKET_RESPONSE_SIZE) {
     ssize_t result = send(job.client_fd, response + sent,
