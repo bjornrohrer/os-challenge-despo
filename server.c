@@ -5,10 +5,8 @@
 #include <signal.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include "bruteforce.h"
 #include <stdint.h>
 #include <pthread.h>
-#include "messages.h"
 #include "protocol.h"
 
 
@@ -65,7 +63,7 @@ int main(int argc, char *argv[]) {
     perror("listen");
     return 1;
   }
-    
+
   pthread_t worker_thread;
   int worker_rc = pthread_create(&worker_thread, NULL, worker, NULL); // start one worker before accepting clients
 
